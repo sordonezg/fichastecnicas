@@ -5,9 +5,10 @@ import { useAuth } from '../context/AuthContext';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
-    ArrowLeft, Calendar, Clock, User, Mic, Lightbulb,
-    Coffee, FileText, CheckCircle, XCircle, ExternalLink, Tag, Check
+    ArrowLeft, Calendar, Clock, User, Users, Mic, Lightbulb,
+    Coffee, FileText, CheckCircle, XCircle, ExternalLink, Tag, Check, MapPin
 } from 'lucide-react';
+import { getVenues } from '../api/venues';
 
 const StatusBadge = ({ estado }) => {
     const styles = {
@@ -71,6 +72,7 @@ const EventDetail = () => {
     const { user } = useAuth();
     const [event, setEvent] = useState(null);
     const [catalog, setCatalog] = useState([]);
+    const [venues, setVenues] = useState([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState('');
@@ -78,9 +80,10 @@ const EventDetail = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [eventRes, catalogRes] = await Promise.all([
+                const [eventRes, catalogRes, venuesRes] = await Promise.all([
                     api.get('/events'),
-                    api.get('/catalog')
+                    api.get('/catalog'),
+                    getVenues()
                 ]);
 
                 const found = eventRes.data.find(e => String(e.id) === String(id));
@@ -88,6 +91,7 @@ const EventDetail = () => {
                 else {
                     setEvent(found);
                     setCatalog(catalogRes.data);
+                    setVenues(venuesRes);
                 }
             } catch {
                 setError('Error al cargar la información.');
@@ -231,6 +235,22 @@ const EventDetail = () => {
                                     <p className="text-xs text-emerald-300/70 font-medium">
                                         {format(new Date(event.fecha_fin), 'HH:mm', { locale: es })} hrs
                                     </p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                                <MapPin size={18} className="text-emerald-400 mt-0.5" />
+                                <div>
+                                    <p className="text-[10px] font-black text-emerald-400 uppercase">Recinto</p>
+                                    <p className="text-sm font-bold truncate">
+                                        {venues.find(v => String(v.id) === String(event.venue_id))?.nombre || 'No especificado'}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                                <Users size={18} className="text-emerald-400 mt-0.5" />
+                                <div>
+                                    <p className="text-[10px] font-black text-emerald-400 uppercase">Asistentes</p>
+                                    <p className="text-sm font-bold">{event.asistentes ? `${event.asistentes} personas` : 'No especificado'}</p>
                                 </div>
                             </div>
                             <div className="flex items-start gap-3">

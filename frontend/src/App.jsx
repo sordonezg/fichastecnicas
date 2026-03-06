@@ -6,6 +6,8 @@ import EventForm from './pages/EventForm';
 import EventDetail from './pages/EventDetail';
 import Layout from './components/Layout';
 import CatalogAdmin from './pages/CatalogAdmin';
+import UserAdmin from './pages/UserAdmin';
+import VenueAdmin from './pages/VenueAdmin';
 
 const ProtectedRoute = ({ children }) => {
   const { user } = useAuth();
@@ -40,10 +42,31 @@ function App() {
               </Layout>
             </ProtectedRoute>
           } />
+          <Route path="/editar-evento/:id" element={
+            <ProtectedRoute>
+              <Layout>
+                <EventForm />
+              </Layout>
+            </ProtectedRoute>
+          } />
           <Route path="/admin/catalogo" element={
             <ProtectedRoute>
               <Layout>
                 <CatalogAdmin />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/recintos" element={
+            <ProtectedRoute>
+              <Layout>
+                <VenueAdmin />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/usuarios" element={
+            <ProtectedRoute>
+              <Layout>
+                <UserAdmin />
               </Layout>
             </ProtectedRoute>
           } />

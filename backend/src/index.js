@@ -15,10 +15,16 @@ app.get('/api/health', (req, res) => {
 const authRoutes = require('./routes/authRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const catalogRoutes = require('./routes/catalogRoutes');
+const userRoutes = require('./routes/userRoutes');
+const venueRoutes = require('./routes/venueRoutes');
+
 
 app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/catalog', catalogRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/venues', venueRoutes);
+
 
 const db = require('./utils/db-sqlite');
 

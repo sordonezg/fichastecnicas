@@ -1,5 +1,5 @@
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Calendar, PlusCircle, User as UserIcon, Bell, Search, LayoutDashboard, Tag } from 'lucide-react';
+import { LogOut, Calendar, PlusCircle, User as UserIcon, Bell, Search, LayoutDashboard, Tag, MapPin } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 const Layout = ({ children }) => {
@@ -23,8 +23,10 @@ const Layout = ({ children }) => {
 
     const menuItems = [
         { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-        { name: 'Nueva Ficha', path: '/nuevo-evento', icon: PlusCircle, roles: [1, 2, 3] },
+        { name: 'Nueva Ficha', path: '/nuevo-evento', icon: PlusCircle, roles: [1, 2] },
+        { name: 'Recintos', path: '/admin/recintos', icon: MapPin, roles: [1] },
         { name: 'Catálogo', path: '/admin/catalogo', icon: Tag, roles: [1] },
+        { name: 'Usuarios', path: '/admin/usuarios', icon: UserIcon, roles: [1] },
     ];
 
     return (

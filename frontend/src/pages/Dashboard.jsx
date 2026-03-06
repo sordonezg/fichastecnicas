@@ -3,12 +3,15 @@ import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameMonth, isSameDay, addMonths, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock, Info, Plus, Calendar as CalendarIcon, Users, Filter } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock, Info, Plus, Calendar as CalendarIcon, Users, Filter, MapPin, RefreshCw } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { getVenues } from '../api/venues';
 
 const Dashboard = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [events, setEvents] = useState([]);
+    const [venues, setVenues] = useState([]);
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedDay, setSelectedDay] = useState(new Date());
     const [loading, setLoading] = useState(true);
@@ -20,8 +23,12 @@ const Dashboard = () => {
 
     const fetchEvents = async () => {
         try {
-            const { data } = await api.get('/events');
-            setEvents(data);
+            const [eventsRes, venuesRes] = await Promise.all([
+                api.get('/events'),
+                getVenues()
+            ]);
+            setEvents(eventsRes.data);
+            setVenues(venuesRes);
         } catch (error) {
             console.error('Error fetching events:', error);
         } finally {
@@ -81,7 +88,7 @@ const Dashboard = () => {
                     </button>
                 </div>
 
-                {(user?.nivel_permiso === 2 || user?.nivel_permiso === 3) && (
+                {(user?.nivel_permiso === 1 || user?.nivel_permiso === 2) && (
                     <Link to="/nuevo-evento" className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-emerald-200 hover:shadow-emerald-300 transform hover:-translate-y-0.5 active:translate-y-0">
                         <Plus size={20} />
                         Crear Solicitud
@@ -120,7 +127,7 @@ const Dashboard = () => {
                     >
                         <div className="flex justify-between items-center mb-1">
                             <span className={`text-sm font-bold w-7 h-7 flex items-center justify-center rounded-lg transition-all ${isTodayFormatted ? 'bg-emerald-600 text-white shadow-md shadow-emerald-200' :
-                                    isSelected ? 'text-emerald-600 font-black' : ''
+                                isSelected ? 'text-emerald-600 font-black' : ''
                                 }`}>
                                 {format(day, 'd')}
                             </span>
@@ -132,8 +139,8 @@ const Dashboard = () => {
                                 <div
                                     key={event.id}
                                     className={`text-[9px] px-1.5 py-1 rounded-md font-bold truncate transition-transform hover:scale-105 ${event.estado === 'aceptado' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                                            event.estado === 'rechazado' ? 'bg-red-50 text-red-700 border border-red-100' :
-                                                'bg-amber-50 text-amber-700 border border-amber-100'
+                                        event.estado === 'rechazado' ? 'bg-red-50 text-red-700 border border-red-100' :
+                                            'bg-amber-50 text-amber-700 border border-amber-100'
                                         }`}
                                 >
                                     {event.titulo}
@@ -172,49 +179,57 @@ const Dashboard = () => {
     };
 
     const EventCard = ({ event }) => (
-        <div className="group bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-premium hover:border-emerald-100 transition-all animate-fade-in duration-300 relative overflow-hidden">
+        <div className="group bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-premium hover:border-emerald-100 transition-all animate-fade-in duration-300 relative overflow-hidden flex flex-col h-full">
             {/* Visual Accent */}
             <div className={`absolute top-0 right-0 w-16 h-16 opacity-5 -mr-8 -mt-8 rounded-full ${event.estado === 'aceptado' ? 'bg-emerald-600' :
-                    event.estado === 'rechazado' ? 'bg-red-600' :
-                        'bg-amber-600'
+                event.estado === 'rechazado' ? 'bg-red-600' :
+                    'bg-amber-600'
                 }`}></div>
 
             <div className="flex justify-between items-start mb-4">
                 <div className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 border shadow-sm ${event.estado === 'aceptado' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                        event.estado === 'rechazado' ? 'bg-red-50 text-red-700 border-red-100' :
-                            'bg-amber-50 text-amber-700 border-amber-100'
+                    event.estado === 'rechazado' ? 'bg-red-50 text-red-700 border-red-100' :
+                        'bg-amber-50 text-amber-700 border-amber-100'
                     }`}>
                     <div className={`w-1.5 h-1.5 rounded-full ${event.estado === 'aceptado' ? 'bg-emerald-500' :
-                            event.estado === 'rechazado' ? 'bg-red-500' :
-                                'bg-amber-500'
+                        event.estado === 'rechazado' ? 'bg-red-500' :
+                            'bg-amber-500'
                         }`}></div>
                     {event.estado}
                 </div>
-                <div className="text-xs font-bold text-gray-400 flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-md">
-                    <Clock size={14} className="text-gray-300" />
-                    {format(new Date(event.fecha_inicio), 'p')}
+                <div className="text-xs font-bold text-gray-400 flex flex-col items-end gap-1">
+                    <div className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-md">
+                        <Clock size={14} className="text-gray-300" />
+                        {format(new Date(event.fecha_inicio), 'p')}
+                    </div>
                 </div>
             </div>
 
             <h4 className="text-lg font-display font-bold text-gray-900 mb-2 group-hover:text-emerald-700 transition-colors leading-tight">
                 {event.titulo}
             </h4>
-            <p className="text-sm text-gray-500 mb-6 line-clamp-2 leading-relaxed">
+
+            <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 mb-3">
+                <MapPin size={14} />
+                {venues.find(v => String(v.id) === String(event.venue_id))?.nombre || 'Recinto no especificado'}
+            </div>
+
+            <p className="text-sm text-gray-500 mb-6 line-clamp-2 leading-relaxed flex-grow">
                 {event.descripcion || 'Sin descripción adicional disponible.'}
             </p>
 
-            <div className="flex items-center justify-between pt-5 border-t border-gray-50">
+            <div className="flex items-center justify-between pt-5 border-t border-gray-50 mt-auto">
                 <div className="flex items-center gap-2.5">
                     <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-xs font-bold text-white shadow-md shadow-emerald-100">
-                        {event.user?.nombre?.charAt(0)}
+                        {event.user?.nombre?.charAt(0) || 'G'}
                     </div>
                     <div>
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Responsable</p>
-                        <p className="text-sm font-bold text-gray-700 -mt-0.5">{event.user?.nombre || 'General'}</p>
+                        <p className="text-sm font-bold text-gray-700 -mt-0.5 max-w-[100px] truncate">{event.user?.nombre || 'General'}</p>
                     </div>
                 </div>
 
-                <Link to={`/evento/${event.id}`} className="p-2 text-gray-300 hover:text-emerald-600 transition-colors">
+                <Link to={`/evento/${event.id}`} className="p-2 text-gray-300 hover:text-emerald-600 transition-colors flex-shrink-0">
                     <Info size={18} />
                 </Link>
             </div>
@@ -234,6 +249,18 @@ const Dashboard = () => {
                     >
                         <XCircle size={14} />
                         Rechazar
+                    </button>
+                </div>
+            )}
+
+            {event.estado === 'rechazado' && (String(event.user_id) === String(user?.id) || user?.nivel_permiso === 1) && (
+                <div className="mt-4 pt-4 border-t border-gray-50">
+                    <button
+                        onClick={() => navigate(`/editar-evento/${event.id}`)}
+                        className="w-full flex items-center justify-center gap-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 py-2.5 rounded-xl text-xs font-bold transition-all"
+                    >
+                        <RefreshCw size={14} />
+                        Reagendar Evento
                     </button>
                 </div>
             )}

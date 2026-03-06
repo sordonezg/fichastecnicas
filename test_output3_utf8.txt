@@ -1,0 +1,37 @@
+﻿Editor Level: 2
+Director Level: 2
+User Level: 3
+Testing with Venue: Auditorio Principal
+
+--- Test 1: Editor creates an event ---
+Editor Response [201]: {
+  id: '1772587167765',
+  titulo: 'Editor Event 1',
+  descripcion: 'Test',
+  fecha_inicio: '2026-03-04T16:00:00.000Z',
+  fecha_fin: '2026-03-04T18:00:00.000Z',
+  requisitos_tecnicos: { audio: [] },
+  user_id: '1771519922879',
+  venue_id: 1
+}
+
+--- Test 2: User 'Gris' level tries to create an event at the same time ---
+User Response [403]: { message: "Access denied." }
+
+--- Test 3: Director creates an event at the EXACT SAME TIME ---
+Director Response [201]: {
+  id: '1772587167785',
+  titulo: 'Director Event 1 Priority',
+  descripcion: 'Priority Test',
+  fecha_inicio: '2026-03-04T16:00:00.000Z',
+  fecha_fin: '2026-03-04T18:00:00.000Z',
+  requisitos_tecnicos: { audio: [] },
+  user_id: '1772576298823',
+  venue_id: 1
+}
+
+--- Verifying Database State ---
+Editor Event Status: rechazado (Expected: rechazado)
+Director Event Status: pendiente (Expected: pendiente)
+
+SUCCESS! Priority booking works.

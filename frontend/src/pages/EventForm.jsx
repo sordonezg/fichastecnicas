@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/axios';
-import { Calendar, Clock, Mic, Lightbulb, Coffee, FileText, ArrowLeft, ArrowRight, Save, CheckCircle2, ChevronRight, Info, Tag } from 'lucide-react';
+import { getVenues } from '../api/venues';
+import { Calendar, Clock, Mic, Lightbulb, Coffee, FileText, ArrowLeft, ArrowRight, Save, CheckCircle2, ChevronRight, Info, Tag, MapPin } from 'lucide-react';
 
 const CATEGORIAS = [
     { key: 'audio', label: 'Audio', icon: Mic, color: 'text-blue-500' },
@@ -11,15 +12,20 @@ const CATEGORIAS = [
 ];
 
 const EventForm = () => {
+    const { id } = useParams();
+    const isEditMode = !!id;
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [catalog, setCatalog] = useState([]);
+    const [venues, setVenues] = useState([]);
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
         titulo: '',
         descripcion: '',
+        asistentes: '',
         fecha_inicio: '',
         fecha_fin: '',
+        venue_id: '',
         requisitos_tecnicos: {
             audio: [],
             iluminacion: [],
@@ -30,16 +36,44 @@ const EventForm = () => {
     });
 
     useEffect(() => {
-        const fetchCatalog = async () => {
+        const fetchInitialData = async () => {
             try {
-                const { data } = await api.get('/catalog');
-                setCatalog(data);
+                const [catalogRes, venuesRes] = await Promise.all([
+                    api.get('/catalog'),
+                    getVenues()
+                ]);
+                setCatalog(catalogRes.data);
+                setVenues(venuesRes.filter(v => v.activo));
+
+                if (isEditMode) {
+                    const { data: events } = await api.get('/events');
+                    const currentEvent = events.find(e => String(e.id) === String(id));
+                    if (currentEvent) {
+                        setFormData({
+                            titulo: currentEvent.titulo,
+                            descripcion: currentEvent.descripcion,
+                            asistentes: currentEvent.asistentes || '',
+                            // Ensure dates are correctly formatted for datetime-local
+                            fecha_inicio: currentEvent.fecha_inicio ? new Date(currentEvent.fecha_inicio).toISOString().slice(0, 16) : '',
+                            fecha_fin: currentEvent.fecha_fin ? new Date(currentEvent.fecha_fin).toISOString().slice(0, 16) : '',
+                            venue_id: currentEvent.venue_id,
+                            requisitos_tecnicos: {
+                                audio: currentEvent.requisitos_tecnicos.audio || [],
+                                iluminacion: currentEvent.requisitos_tecnicos.iluminacion || [],
+                                catering: currentEvent.requisitos_tecnicos.catering || [],
+                                mobiliario: currentEvent.requisitos_tecnicos.mobiliario || [],
+                                documentacion_url: currentEvent.requisitos_tecnicos.documentacion_url || ''
+                            }
+                        });
+                    }
+                }
             } catch (error) {
-                console.error('Error fetching catalog:', error);
+                console.error('Error fetching data:', error);
+                setError('Error al cargar datos necesarios.');
             }
         };
-        fetchCatalog();
-    }, []);
+        fetchInitialData();
+    }, [id, isEditMode]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -79,11 +113,19 @@ const EventForm = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         // Manual validation for fields in hidden steps
-        if (!formData.titulo.trim()) {
+        if (!formData.titulo.trim() || !formData.venue_id || !formData.asistentes) {
             setStep(1);
-            setError('Por favor ingrese el título del evento.');
+            setError('Por favor complete todos los campos obligatorios.');
             return;
         }
+
+        const selectedVenue = venues.find(v => String(v.id) === String(formData.venue_id));
+        if (selectedVenue && parseInt(formData.asistentes) > selectedVenue.capacidad) {
+            setStep(1);
+            setError(`El recinto seleccionado no tiene capacidad suficiente. Máximo permitido: ${selectedVenue.capacidad}.`);
+            return;
+        }
+
         if (!formData.fecha_inicio || !formData.fecha_fin) {
             setStep(2);
             setError('Por favor seleccione las fechas del evento.');
@@ -97,10 +139,17 @@ const EventForm = () => {
         setError('');
         setLoading(true);
         try {
-            await api.post('/events', formData);
+            if (isEditMode) {
+                // When rescheduling, we also want to return it to 'pendiente' status. 
+                // However, our backend update endpoint only updates data, so we might need a status reset. 
+                // For simplicity, we assume editing a rejected event resubmits it for approval (this requires backend change to set it back to pendiente).
+                await api.put(`/events/${id}`, { ...formData, estado: 'pendiente' });
+            } else {
+                await api.post('/events', formData);
+            }
             navigate('/');
         } catch (err) {
-            setError('Error al crear la ficha técnica: ' + (err.response?.data?.message || err.message));
+            setError('Error al guardar la ficha técnica: ' + (err.response?.data?.message || err.message));
         } finally {
             setLoading(false);
         }
@@ -123,8 +172,8 @@ const EventForm = () => {
                         <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
                         Dashboard
                     </button>
-                    <h1 className="text-4xl font-display font-bold text-gray-900">Nueva Solicitud</h1>
-                    <p className="text-gray-500 font-medium">Configure los detalles técnicos de su evento</p>
+                    <h1 className="text-4xl font-display font-bold text-gray-900">{isEditMode ? 'Reagendar Evento' : 'Nueva Solicitud'}</h1>
+                    <p className="text-gray-500 font-medium">{isEditMode ? 'Edite la fecha o recinto para reprogramar su evento' : 'Configure los detalles técnicos de su evento'}</p>
                 </div>
 
                 {/* Vertical/Horizontal Steps indicator */}
@@ -187,6 +236,41 @@ const EventForm = () => {
                                         value={formData.descripcion}
                                         onChange={handleChange}
                                     ></textarea>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2 ml-1 uppercase tracking-tight flex items-center gap-2">
+                                            👥 Asistentes Estimados
+                                        </label>
+                                        <input
+                                            type="number"
+                                            required
+                                            min="1"
+                                            name="asistentes"
+                                            className="block w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none font-medium placeholder:text-gray-300"
+                                            placeholder="Ej: 50"
+                                            value={formData.asistentes}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2 ml-1 uppercase tracking-tight flex items-center gap-2">
+                                            <MapPin size={16} className="text-emerald-500" />
+                                            Recinto
+                                        </label>
+                                        <select
+                                            required
+                                            name="venue_id"
+                                            className="block w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none font-medium text-gray-700 appearance-none"
+                                            value={formData.venue_id}
+                                            onChange={handleChange}
+                                        >
+                                            <option value="" disabled>Seleccione un recinto...</option>
+                                            {venues.map(v => (
+                                                <option key={v.id} value={v.id}>{v.nombre} (Capacidad: {v.capacidad})</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
 
@@ -278,13 +362,13 @@ const EventForm = () => {
                                                     key={item.id}
                                                     onClick={() => handleCheckboxChange(cat.key, item.id)}
                                                     className={`group flex items-center gap-4 p-4 rounded-2xl border transition-all cursor-pointer ${formData.requisitos_tecnicos[cat.key]?.includes(item.id)
-                                                            ? 'bg-emerald-50 border-emerald-200 shadow-sm'
-                                                            : 'bg-gray-50 border-gray-100 hover:border-gray-200'
+                                                        ? 'bg-emerald-50 border-emerald-200 shadow-sm'
+                                                        : 'bg-gray-50 border-gray-100 hover:border-gray-200'
                                                         }`}
                                                 >
                                                     <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${formData.requisitos_tecnicos[cat.key]?.includes(item.id)
-                                                            ? 'bg-emerald-600 border-emerald-600'
-                                                            : 'bg-white border-gray-300 group-hover:border-emerald-300'
+                                                        ? 'bg-emerald-600 border-emerald-600'
+                                                        : 'bg-white border-gray-300 group-hover:border-emerald-300'
                                                         }`}>
                                                         {formData.requisitos_tecnicos[cat.key]?.includes(item.id) && <CheckCircle2 size={14} className="text-white" />}
                                                     </div>
@@ -351,6 +435,13 @@ const EventForm = () => {
                             <div className="space-y-1">
                                 <p className="text-emerald-300 font-black text-[10px] uppercase tracking-widest">Proyecto</p>
                                 <p className="font-bold text-lg leading-tight truncate">{formData.titulo || 'Sin título'}</p>
+                            </div>
+
+                            <div className="space-y-1">
+                                <p className="text-emerald-300 font-black text-[10px] uppercase tracking-widest">Recinto</p>
+                                <p className="font-bold text-lg leading-tight truncate">
+                                    {venues.find(v => String(v.id) === String(formData.venue_id))?.nombre || 'Pendiente de definir'}
+                                </p>
                             </div>
 
                             <div className="space-y-1">

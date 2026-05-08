@@ -33,3 +33,8 @@ Thumbs.db
 
 # Prisma
 backend/prisma/migrations/
+
+# Backend AdonisJS
+backend-adonis/tmp
+backend-adonis/public/assets
+.fleet

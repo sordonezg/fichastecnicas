@@ -44,7 +44,8 @@ const migrate = async () => {
                 data: {
                     ...event,
                     id: String(event.id),
-                    user_id: String(event.user_id)
+                    user_id: String(event.user_id),
+                    venue_id: event.venue_id || 1
                 }
             });
         }

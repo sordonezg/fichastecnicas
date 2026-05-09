@@ -183,27 +183,38 @@ const EventDetail = () => {
                         </p>
                     </div>
 
-                    {/* Technical Requirements */}
-                    <div className="bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm">
-                        <h2 className="text-lg font-display font-bold text-gray-900 mb-2 flex items-center gap-2">
-                            <Mic size={18} className="text-blue-500" /> Especificaciones Técnicas
+                    {/* Technical Requirements / Detalles Específicos */}
+                    <div className="bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm space-y-6">
+                        <h2 className="text-lg font-display font-bold text-gray-900 mb-2 flex items-center gap-2 border-b border-gray-50 pb-4">
+                            <Mic size={18} className="text-blue-500" /> Detalles de la Ficha Técnica
                         </h2>
-                        <RequirementSection icon={Mic} iconColor="text-blue-500" label="Audio" value={req.audio} catalog={catalog} />
-                        <RequirementSection icon={Lightbulb} iconColor="text-amber-500" label="Iluminación" value={req.iluminacion} catalog={catalog} />
-                        <RequirementSection icon={Coffee} iconColor="text-orange-400" label="Catering" value={req.catering} catalog={catalog} />
-                        <RequirementSection icon={Tag} iconColor="text-purple-500" label="Mobiliario" value={req.mobiliario} catalog={catalog} />
-                        {req.documentacion_url && (
-                            <div className="pt-6">
-                                <a
-                                    href={req.documentacion_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 text-emerald-600 font-bold text-sm hover:underline"
-                                >
-                                    <ExternalLink size={16} /> Ver Rider Técnico
-                                </a>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                            <div>
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Objetivo</p>
+                                <p className="text-sm font-semibold text-gray-800">{event.objective || <span className="text-gray-300 italic">No especificado</span>}</p>
                             </div>
-                        )}
+                            <div>
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Dress Code</p>
+                                <p className="text-sm font-semibold text-gray-800">{event.dressCode || <span className="text-gray-300 italic">No especificado</span>}</p>
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Programa Impactado</p>
+                                <p className="text-sm font-semibold text-gray-800">{event.programImpacted || <span className="text-gray-300 italic">No especificado</span>}</p>
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Especificaciones de Invitados</p>
+                                <p className="text-sm font-semibold text-gray-800">{event.guestSpecifications || <span className="text-gray-300 italic">No especificado</span>}</p>
+                            </div>
+                            <div className="md:col-span-2">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Detalle de Presidium</p>
+                                <p className="text-sm font-semibold text-gray-800">{event.presidiumDetail || <span className="text-gray-300 italic">No especificado</span>}</p>
+                            </div>
+                            <div className="md:col-span-2">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Acción del Director</p>
+                                <p className="text-sm font-semibold text-gray-800">{event.directorAction || <span className="text-gray-300 italic">No especificado</span>}</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

@@ -56,11 +56,52 @@ router.group(() => {
 
 // --- Rutas de IA y Chatbot (Protegidas) ---
 const RagController = () => import('#controllers/rag_controller')
+const EventsController = () => import('#controllers/events_controller')
+const VenuesController = () => import('#controllers/venues_controller')
+const UsersController = () => import('#controllers/users_controller')
+const LoginControllerIntegration = () => import('#controllers/auth/login_controller')
 
 router.group(() => {
     router.post('/chat', [RagController, 'chat']).as('rag.chat')
-
     router.post('/vectorize', [RagController, 'vectorizeVersion']).as('rag.vectorize')
 })
 .prefix('/api/ai')
 .use([middleware.auth()]) // Todos los roles autenticados pueden usar el chatbot
+
+// --- API Integrada con Frontend (Fichas Técnicas) ---
+router.group(() => {
+    // Auth legacy support
+    router.post('/auth/login', [LoginControllerIntegration, 'login'])
+    router.post('/auth/logout', [LoginControllerIntegration, 'logout'])
+    // UsersController store handles registration for legacy auth
+    router.post('/auth/register', [UsersController, 'store'])
+
+    // Events / Fichas Técnicas
+    router.get('/events', [EventsController, 'index'])
+    router.post('/events', [EventsController, 'store'])
+    router.put('/events/:id', [EventsController, 'update'])
+    router.patch('/events/:id/status', [EventsController, 'updateStatus'])
+    router.delete('/events/:id', [EventsController, 'destroy'])
+
+    // Venues / Locations
+    router.get('/venues', [VenuesController, 'index'])
+    router.post('/venues', [VenuesController, 'store'])
+    router.put('/venues/:id', [VenuesController, 'update'])
+    router.delete('/venues/:id', [VenuesController, 'destroy'])
+
+    // Users
+    router.get('/users', [UsersController, 'index'])
+    router.post('/users', [UsersController, 'store'])
+    router.put('/users/:id', [UsersController, 'update'])
+    router.delete('/users/:id', [UsersController, 'destroy'])
+
+    // Catalog
+    const CatalogsController = () => import('#controllers/catalogs_controller')
+    router.get('/organizations', [CatalogsController, 'getOrganizations'])
+    router.get('/event-types', [CatalogsController, 'getEventTypes'])
+    router.get('/catalog', [CatalogsController, 'index'])
+    
+    router.post('/catalog', [CatalogsController, 'store'])
+    router.delete('/catalog/:id', [CatalogsController, 'destroy'])
+    
+}).prefix('/api') // Frontend points to /api

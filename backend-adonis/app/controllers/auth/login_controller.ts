@@ -17,12 +17,30 @@ export default class LoginController {
 
       await auth.use('web').login(user)
       
+      const jwt = await import('jsonwebtoken')
+      const sign = jwt.default?.sign || (jwt as any).sign
+      
+      const token = sign(
+        { id: user.id, email: user.email, role: user.role?.name },
+        process.env.APP_KEY || 'supersecretkey123',
+        { expiresIn: '24h' }
+      )
+      
+      const roleToNivel: Record<string, number> = {
+        'admin': 1,
+        'auxiliar': 2,
+        'staff_interno': 3
+      }
+
       return response.ok({
         message: 'Inicio de sesión exitoso',
+        token,
         user: {
           id: user.id,
+          nombre: user.name,
           email: user.email,
-          role: user.role?.name
+          role: user.role?.name,
+          nivel_permiso: roleToNivel[user.role?.name || 'staff_interno'] || 3
         }
       })
     } catch (error) {
@@ -32,7 +50,8 @@ export default class LoginController {
       ) {
         return response.unauthorized({ message: 'Credenciales inválidas' })
       }
-      return response.internalServerError({ message: 'Ocurrió un error inesperado' })
+      console.error(error)
+      return response.internalServerError({ message: 'Ocurrió un error inesperado', error: String(error), stack: error?.stack })
     }
   }
 

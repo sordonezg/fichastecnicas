@@ -2,68 +2,68 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/axios';
 import { getVenues } from '../api/venues';
-import { Calendar, Clock, Mic, Lightbulb, Coffee, FileText, ArrowLeft, ArrowRight, Save, CheckCircle2, ChevronRight, Info, Tag, MapPin } from 'lucide-react';
-
-const CATEGORIAS = [
-    { key: 'audio', label: 'Audio', icon: Mic, color: 'text-blue-500' },
-    { key: 'iluminacion', label: 'Iluminación', icon: Lightbulb, color: 'text-amber-500' },
-    { key: 'catering', label: 'Catering', icon: Coffee, color: 'text-orange-500' },
-    { key: 'mobiliario', label: 'Mobiliario', icon: Tag, color: 'text-purple-500' },
-];
+import { Calendar, Clock, FileText, ArrowLeft, ArrowRight, Save, CheckCircle2, ChevronRight, Info, MapPin, Briefcase } from 'lucide-react';
 
 const EventForm = () => {
     const { id } = useParams();
     const isEditMode = !!id;
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
-    const [catalog, setCatalog] = useState([]);
     const [venues, setVenues] = useState([]);
+    const [organizations, setOrganizations] = useState([]);
+    const [eventTypes, setEventTypes] = useState([]);
     const [step, setStep] = useState(1);
+    
+    // Updated to match AdonisJS Event & VersionContent models
     const [formData, setFormData] = useState({
-        titulo: '',
-        descripcion: '',
-        asistentes: '',
-        fecha_inicio: '',
-        fecha_fin: '',
-        venue_id: '',
-        requisitos_tecnicos: {
-            audio: [],
-            iluminacion: [],
-            catering: [],
-            mobiliario: [],
-            documentacion_url: ''
-        }
+        name: '',
+        objective: '',
+        description: '',
+        startsAt: '',
+        endsAt: '',
+        locationId: '',
+        organizationId: '',
+        eventTypeId: '',
+        dressCode: '',
+        programImpacted: '',
+        guestSpecifications: '',
+        presidiumDetail: '',
+        directorAction: ''
     });
 
     useEffect(() => {
         const fetchInitialData = async () => {
             try {
-                const [catalogRes, venuesRes] = await Promise.all([
-                    api.get('/catalog'),
-                    getVenues()
+                // We map locations to venues in the backend or frontend api
+                const venuesRes = await getVenues();
+                setVenues(venuesRes || []);
+
+                // Fetch catalogs from Adonis
+                const [orgsRes, typesRes] = await Promise.all([
+                    api.get('/organizations'),
+                    api.get('/event-types')
                 ]);
-                setCatalog(catalogRes.data);
-                setVenues(venuesRes.filter(v => v.activo));
+                setOrganizations(orgsRes.data || []);
+                setEventTypes(typesRes.data || []);
 
                 if (isEditMode) {
                     const { data: events } = await api.get('/events');
                     const currentEvent = events.find(e => String(e.id) === String(id));
                     if (currentEvent) {
                         setFormData({
-                            titulo: currentEvent.titulo,
-                            descripcion: currentEvent.descripcion,
-                            asistentes: currentEvent.asistentes || '',
-                            // Ensure dates are correctly formatted for datetime-local
-                            fecha_inicio: currentEvent.fecha_inicio ? new Date(currentEvent.fecha_inicio).toISOString().slice(0, 16) : '',
-                            fecha_fin: currentEvent.fecha_fin ? new Date(currentEvent.fecha_fin).toISOString().slice(0, 16) : '',
-                            venue_id: currentEvent.venue_id,
-                            requisitos_tecnicos: {
-                                audio: currentEvent.requisitos_tecnicos.audio || [],
-                                iluminacion: currentEvent.requisitos_tecnicos.iluminacion || [],
-                                catering: currentEvent.requisitos_tecnicos.catering || [],
-                                mobiliario: currentEvent.requisitos_tecnicos.mobiliario || [],
-                                documentacion_url: currentEvent.requisitos_tecnicos.documentacion_url || ''
-                            }
+                            name: currentEvent.name || currentEvent.titulo || '',
+                            objective: currentEvent.objective || '',
+                            description: currentEvent.description || currentEvent.descripcion || '',
+                            startsAt: currentEvent.startsAt || currentEvent.fecha_inicio ? new Date(currentEvent.startsAt || currentEvent.fecha_inicio).toISOString().slice(0, 16) : '',
+                            endsAt: currentEvent.endsAt || currentEvent.fecha_fin ? new Date(currentEvent.endsAt || currentEvent.fecha_fin).toISOString().slice(0, 16) : '',
+                            locationId: currentEvent.locationId || currentEvent.venue_id || '',
+                            organizationId: currentEvent.organizationId || '',
+                            eventTypeId: currentEvent.eventTypeId || '',
+                            dressCode: currentEvent.dressCode || '',
+                            programImpacted: currentEvent.programImpacted || '',
+                            guestSpecifications: currentEvent.guestSpecifications || currentEvent.asistentes || '',
+                            presidiumDetail: currentEvent.presidiumDetail || '',
+                            directorAction: currentEvent.directorAction || ''
                         });
                     }
                 }
@@ -77,61 +77,26 @@ const EventForm = () => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        if (name.includes('.')) {
-            const [parent, child] = name.split('.');
-            setFormData(prev => ({
-                ...prev,
-                [parent]: {
-                    ...prev[parent],
-                    [child]: value
-                }
-            }));
-        } else {
-            setFormData(prev => ({ ...prev, [name]: value }));
-        }
-    };
-
-    const handleCheckboxChange = (categoria, itemId) => {
-        setFormData(prev => {
-            const current = prev.requisitos_tecnicos[categoria] || [];
-            const updated = current.includes(itemId)
-                ? current.filter(id => id !== itemId)
-                : [...current, itemId];
-
-            return {
-                ...prev,
-                requisitos_tecnicos: {
-                    ...prev.requisitos_tecnicos,
-                    [categoria]: updated
-                }
-            };
-        });
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
     const [error, setError] = useState('');
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        // Manual validation for fields in hidden steps
-        if (!formData.titulo.trim() || !formData.venue_id || !formData.asistentes) {
+        
+        if (!formData.name.trim() || !formData.locationId || !formData.organizationId || !formData.eventTypeId) {
             setStep(1);
-            setError('Por favor complete todos los campos obligatorios.');
+            setError('Por favor complete todos los campos obligatorios (Nombre, Organización, Tipo y Recinto).');
             return;
         }
 
-        const selectedVenue = venues.find(v => String(v.id) === String(formData.venue_id));
-        if (selectedVenue && parseInt(formData.asistentes) > selectedVenue.capacidad) {
-            setStep(1);
-            setError(`El recinto seleccionado no tiene capacidad suficiente. Máximo permitido: ${selectedVenue.capacidad}.`);
-            return;
-        }
-
-        if (!formData.fecha_inicio || !formData.fecha_fin) {
+        if (!formData.startsAt || !formData.endsAt) {
             setStep(2);
             setError('Por favor seleccione las fechas del evento.');
             return;
         }
-        if (new Date(formData.fecha_fin) <= new Date(formData.fecha_inicio)) {
+        if (new Date(formData.endsAt) <= new Date(formData.startsAt)) {
             setStep(2);
             setError('La fecha de finalización debe ser posterior a la de inicio.');
             return;
@@ -140,10 +105,7 @@ const EventForm = () => {
         setLoading(true);
         try {
             if (isEditMode) {
-                // When rescheduling, we also want to return it to 'pendiente' status. 
-                // However, our backend update endpoint only updates data, so we might need a status reset. 
-                // For simplicity, we assume editing a rejected event resubmits it for approval (this requires backend change to set it back to pendiente).
-                await api.put(`/events/${id}`, { ...formData, estado: 'pendiente' });
+                await api.put(`/events/${id}`, formData);
             } else {
                 await api.post('/events', formData);
             }
@@ -158,7 +120,7 @@ const EventForm = () => {
     const steps = [
         { id: 1, name: 'General', icon: FileText },
         { id: 2, name: 'Horario', icon: Clock },
-        { id: 3, name: 'Técnico', icon: Mic },
+        { id: 3, name: 'Detalles Específicos', icon: Briefcase },
     ];
 
     return (
@@ -172,15 +134,15 @@ const EventForm = () => {
                         <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
                         Dashboard
                     </button>
-                    <h1 className="text-4xl font-display font-bold text-gray-900">{isEditMode ? 'Reagendar Evento' : 'Nueva Solicitud'}</h1>
-                    <p className="text-gray-500 font-medium">{isEditMode ? 'Edite la fecha o recinto para reprogramar su evento' : 'Configure los detalles técnicos de su evento'}</p>
+                    <h1 className="text-4xl font-display font-bold text-gray-900">{isEditMode ? 'Reagendar Evento' : 'Nueva Ficha Técnica'}</h1>
+                    <p className="text-gray-500 font-medium">{isEditMode ? 'Edite los detalles de su ficha técnica' : 'Configure los detalles de su ficha técnica (Adonis)'}</p>
                 </div>
 
-                {/* Vertical/Horizontal Steps indicator */}
                 <div className="flex items-center bg-white p-2 rounded-2xl shadow-sm border border-gray-100">
                     {steps.map((s, i) => (
                         <div key={s.id} className="flex items-center">
                             <button
+                                type="button"
                                 onClick={() => setStep(s.id)}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${step === s.id ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-100' : 'text-gray-400 hover:text-gray-600'
                                     }`}
@@ -215,62 +177,90 @@ const EventForm = () => {
 
                             <div className="space-y-6">
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2 ml-1 uppercase tracking-tight">Título del Evento</label>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2 ml-1 uppercase tracking-tight">Nombre del Evento</label>
                                     <input
                                         type="text"
                                         required
-                                        name="titulo"
+                                        name="name"
                                         className="block w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none font-medium placeholder:text-gray-300"
                                         placeholder="Ej: Lanzamiento Web 3.0"
-                                        value={formData.titulo}
+                                        value={formData.name}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2 ml-1 uppercase tracking-tight">Organización</label>
+                                        <select
+                                            required
+                                            name="organizationId"
+                                            className="block w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none font-medium text-gray-700 appearance-none"
+                                            value={formData.organizationId}
+                                            onChange={handleChange}
+                                        >
+                                            <option value="" disabled>Seleccione organización...</option>
+                                            {organizations.map(o => (
+                                                <option key={o.id} value={o.id}>{o.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2 ml-1 uppercase tracking-tight">Tipo de Evento</label>
+                                        <select
+                                            required
+                                            name="eventTypeId"
+                                            className="block w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none font-medium text-gray-700 appearance-none"
+                                            value={formData.eventTypeId}
+                                            onChange={handleChange}
+                                        >
+                                            <option value="" disabled>Seleccione tipo...</option>
+                                            {eventTypes.map(t => (
+                                                <option key={t.id} value={t.id}>{t.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2 ml-1 uppercase tracking-tight">Objetivo</label>
+                                    <input
+                                        type="text"
+                                        name="objective"
+                                        className="block w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none font-medium placeholder:text-gray-300"
+                                        placeholder="Objetivo principal del evento..."
+                                        value={formData.objective}
                                         onChange={handleChange}
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-2 ml-1 uppercase tracking-tight">Descripción</label>
                                     <textarea
-                                        name="descripcion"
-                                        rows="6"
+                                        name="description"
+                                        rows="4"
                                         className="block w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none font-medium placeholder:text-gray-300"
-                                        placeholder="Objetivo y detalles generales del evento..."
-                                        value={formData.descripcion}
+                                        placeholder="Detalles generales..."
+                                        value={formData.description}
                                         onChange={handleChange}
                                     ></textarea>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2 ml-1 uppercase tracking-tight flex items-center gap-2">
-                                            👥 Asistentes Estimados
-                                        </label>
-                                        <input
-                                            type="number"
-                                            required
-                                            min="1"
-                                            name="asistentes"
-                                            className="block w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none font-medium placeholder:text-gray-300"
-                                            placeholder="Ej: 50"
-                                            value={formData.asistentes}
-                                            onChange={handleChange}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2 ml-1 uppercase tracking-tight flex items-center gap-2">
-                                            <MapPin size={16} className="text-emerald-500" />
-                                            Recinto
-                                        </label>
-                                        <select
-                                            required
-                                            name="venue_id"
-                                            className="block w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none font-medium text-gray-700 appearance-none"
-                                            value={formData.venue_id}
-                                            onChange={handleChange}
-                                        >
-                                            <option value="" disabled>Seleccione un recinto...</option>
-                                            {venues.map(v => (
-                                                <option key={v.id} value={v.id}>{v.nombre} (Capacidad: {v.capacidad})</option>
-                                            ))}
-                                        </select>
-                                    </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2 ml-1 uppercase tracking-tight flex items-center gap-2">
+                                        <MapPin size={16} className="text-emerald-500" />
+                                        Recinto / Locación
+                                    </label>
+                                    <select
+                                        required
+                                        name="locationId"
+                                        className="block w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none font-medium text-gray-700 appearance-none"
+                                        value={formData.locationId}
+                                        onChange={handleChange}
+                                    >
+                                        <option value="" disabled>Seleccione una locación...</option>
+                                        {venues.map(v => (
+                                            <option key={v.id} value={v.id}>{v.nombre || v.name}</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
 
@@ -304,9 +294,9 @@ const EventForm = () => {
                                     <div className="p-1 px-2 border border-emerald-100 rounded-2xl bg-emerald-50/10 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all">
                                         <input
                                             type="datetime-local"
-                                            name="fecha_inicio"
+                                            name="startsAt"
                                             className="block w-full px-2 py-3 bg-transparent outline-none text-emerald-900 font-bold uppercase text-xs"
-                                            value={formData.fecha_inicio}
+                                            value={formData.startsAt}
                                             onChange={handleChange}
                                         />
                                     </div>
@@ -318,9 +308,9 @@ const EventForm = () => {
                                     <div className="p-1 px-2 border border-red-100 rounded-2xl bg-red-50/10 focus-within:ring-4 focus-within:ring-red-500/10 transition-all">
                                         <input
                                             type="datetime-local"
-                                            name="fecha_fin"
+                                            name="endsAt"
                                             className="block w-full px-2 py-3 bg-transparent outline-none text-red-900 font-bold uppercase text-xs"
-                                            value={formData.fecha_fin}
+                                            value={formData.endsAt}
                                             onChange={handleChange}
                                         />
                                     </div>
@@ -330,7 +320,7 @@ const EventForm = () => {
                             <div className="mt-12 p-6 bg-amber-50 rounded-2xl border border-amber-100 flex gap-4">
                                 <div className="text-amber-600"><Info size={24} /></div>
                                 <p className="text-sm text-amber-800 leading-relaxed font-medium">
-                                    Asegúrese de incluir tiempo adicional para pruebas técnicas antes del inicio oficial. Los eventos se bloquean en el calendario una vez aprobados.
+                                    Asegúrese de incluir tiempo adicional para pruebas técnicas antes del inicio oficial.
                                 </p>
                             </div>
 
@@ -345,58 +335,62 @@ const EventForm = () => {
                         <div className="bg-white p-8 rounded-[2rem] shadow-premium border border-gray-100 animate-slide-up">
                             <div className="flex items-center gap-3 mb-8">
                                 <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
-                                    <Mic size={24} />
+                                    <Briefcase size={24} />
                                 </div>
-                                <h2 className="text-2xl font-display font-bold text-gray-900">Especificaciones Técnicas</h2>
+                                <h2 className="text-2xl font-display font-bold text-gray-900">Detalles de la Ficha Técnica</h2>
                             </div>
 
-                            <div className="space-y-10">
-                                {CATEGORIAS.map(cat => (
-                                    <div key={cat.key}>
-                                        <label className={`flex items-center gap-2 text-sm font-black text-gray-400 mb-5 uppercase tracking-widest pl-1`}>
-                                            <cat.icon size={16} className={cat.color} /> {cat.label}
-                                        </label>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            {catalog.filter(item => item.categoria === cat.key).map(item => (
-                                                <div
-                                                    key={item.id}
-                                                    onClick={() => handleCheckboxChange(cat.key, item.id)}
-                                                    className={`group flex items-center gap-4 p-4 rounded-2xl border transition-all cursor-pointer ${formData.requisitos_tecnicos[cat.key]?.includes(item.id)
-                                                        ? 'bg-emerald-50 border-emerald-200 shadow-sm'
-                                                        : 'bg-gray-50 border-gray-100 hover:border-gray-200'
-                                                        }`}
-                                                >
-                                                    <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${formData.requisitos_tecnicos[cat.key]?.includes(item.id)
-                                                        ? 'bg-emerald-600 border-emerald-600'
-                                                        : 'bg-white border-gray-300 group-hover:border-emerald-300'
-                                                        }`}>
-                                                        {formData.requisitos_tecnicos[cat.key]?.includes(item.id) && <CheckCircle2 size={14} className="text-white" />}
-                                                    </div>
-                                                    <span className={`text-sm font-bold ${formData.requisitos_tecnicos[cat.key]?.includes(item.id) ? 'text-emerald-900' : 'text-gray-600'
-                                                        }`}>
-                                                        {item.nombre}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                            {catalog.filter(item => item.categoria === cat.key).length === 0 && (
-                                                <p className="text-xs text-gray-400 italic col-span-2">No hay ítems configurados para esta categoría.</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-
+                            <div className="space-y-6">
                                 <div>
-                                    <label className="flex items-center gap-2 text-sm font-black text-gray-400 mb-3 uppercase tracking-widest pl-1">
-                                        <FileText size={16} className="text-purple-500" /> Documentación Adicional (URL)
-                                    </label>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2 ml-1 uppercase tracking-tight">Dress Code</label>
                                     <input
-                                        type="url"
-                                        name="requisitos_tecnicos.documentacion_url"
-                                        className="block w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none text-sm font-medium transition-all"
-                                        placeholder="https://drive.google.com/..."
-                                        value={formData.requisitos_tecnicos.documentacion_url}
+                                        type="text"
+                                        name="dressCode"
+                                        className="block w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none font-medium placeholder:text-gray-300"
+                                        placeholder="Ej: Formal, Casual, etc."
+                                        value={formData.dressCode}
                                         onChange={handleChange}
                                     />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2 ml-1 uppercase tracking-tight">Programa Impactado</label>
+                                    <input
+                                        type="text"
+                                        name="programImpacted"
+                                        className="block w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none font-medium placeholder:text-gray-300"
+                                        value={formData.programImpacted}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2 ml-1 uppercase tracking-tight">Especificaciones de Invitados</label>
+                                    <textarea
+                                        name="guestSpecifications"
+                                        rows="2"
+                                        className="block w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none font-medium placeholder:text-gray-300"
+                                        value={formData.guestSpecifications}
+                                        onChange={handleChange}
+                                    ></textarea>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2 ml-1 uppercase tracking-tight">Detalle de Presidium</label>
+                                    <textarea
+                                        name="presidiumDetail"
+                                        rows="2"
+                                        className="block w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none font-medium placeholder:text-gray-300"
+                                        value={formData.presidiumDetail}
+                                        onChange={handleChange}
+                                    ></textarea>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2 ml-1 uppercase tracking-tight">Acción del Director</label>
+                                    <textarea
+                                        name="directorAction"
+                                        rows="2"
+                                        className="block w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none font-medium placeholder:text-gray-300"
+                                        value={formData.directorAction}
+                                        onChange={handleChange}
+                                    ></textarea>
                                 </div>
                             </div>
 
@@ -410,12 +404,12 @@ const EventForm = () => {
                                     {loading ? (
                                         <div className="flex items-center gap-2">
                                             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                            Enviando...
+                                            Guardando...
                                         </div>
                                     ) : (
                                         <>
                                             <Save size={20} />
-                                            Finalizar Solicitud
+                                            Guardar Ficha Técnica
                                         </>
                                     )}
                                 </button>
@@ -434,41 +428,41 @@ const EventForm = () => {
                         <div className="space-y-6 relative z-10">
                             <div className="space-y-1">
                                 <p className="text-emerald-300 font-black text-[10px] uppercase tracking-widest">Proyecto</p>
-                                <p className="font-bold text-lg leading-tight truncate">{formData.titulo || 'Sin título'}</p>
+                                <p className="font-bold text-lg leading-tight truncate">{formData.name || 'Sin título'}</p>
                             </div>
 
                             <div className="space-y-1">
-                                <p className="text-emerald-300 font-black text-[10px] uppercase tracking-widest">Recinto</p>
+                                <p className="text-emerald-300 font-black text-[10px] uppercase tracking-widest">Locación</p>
                                 <p className="font-bold text-lg leading-tight truncate">
-                                    {venues.find(v => String(v.id) === String(formData.venue_id))?.nombre || 'Pendiente de definir'}
+                                    {venues.find(v => String(v.id) === String(formData.locationId))?.nombre || venues.find(v => String(v.id) === String(formData.locationId))?.name || 'Pendiente'}
                                 </p>
                             </div>
 
                             <div className="space-y-1">
                                 <p className="text-emerald-300 font-black text-[10px] uppercase tracking-widest">Programación</p>
                                 <p className="text-sm font-medium text-emerald-50/80">
-                                    {formData.fecha_inicio ? new Date(formData.fecha_inicio).toLocaleString('es-ES', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Pendiente de definir'}
+                                    {formData.startsAt ? new Date(formData.startsAt).toLocaleString('es-ES', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Pendiente de definir'}
                                 </p>
                             </div>
 
                             <div className="pt-6 mt-6 border-t border-emerald-800 space-y-4">
-                                <div className={`flex items-center gap-2 text-sm ${formData.titulo ? 'text-emerald-400' : 'text-emerald-700'}`}>
+                                <div className={`flex items-center gap-2 text-sm ${formData.name ? 'text-emerald-400' : 'text-emerald-700'}`}>
                                     <CheckCircle2 size={16} /> Información básica
                                 </div>
-                                <div className={`flex items-center gap-2 text-sm ${formData.fecha_inicio ? 'text-emerald-400' : 'text-emerald-700'}`}>
+                                <div className={`flex items-center gap-2 text-sm ${formData.startsAt ? 'text-emerald-400' : 'text-emerald-700'}`}>
                                     <CheckCircle2 size={16} /> Horarios definidos
                                 </div>
-                                <div className={`flex items-center gap-2 text-sm ${Object.values(formData.requisitos_tecnicos).some(v => Array.isArray(v) ? v.length > 0 : !!v) ? 'text-emerald-400' : 'text-emerald-700'}`}>
-                                    <CheckCircle2 size={16} /> Ficha técnica ({Object.values(formData.requisitos_tecnicos).reduce((acc, curr) => acc + (Array.isArray(curr) ? curr.length : 0), 0)} ítems)
+                                <div className={`flex items-center gap-2 text-sm ${formData.objective ? 'text-emerald-400' : 'text-emerald-700'}`}>
+                                    <CheckCircle2 size={16} /> Detalles técnicos
                                 </div>
                             </div>
                         </div>
 
                         <div className="mt-12 p-6 bg-emerald-950/40 rounded-3xl border border-emerald-800 relative z-10">
-                            <p className="text-[10px] text-emerald-400 font-bold uppercase mb-2">Estado</p>
+                            <p className="text-[10px] text-emerald-400 font-bold uppercase mb-2">Versión</p>
                             <div className="flex items-center gap-2 text-white font-bold">
                                 <div className="w-2 h-2 rounded-full bg-amber-400"></div>
-                                Borrador en curso
+                                {isEditMode ? 'Creando nueva versión' : 'Borrador inicial'}
                             </div>
                         </div>
                     </div>

@@ -6,6 +6,7 @@ import User from './user.js'
 import EventType from './event_type.js'
 import EventVersion from './event_version.js'
 import EventVersionEmbedding from './event_version_embedding.js'
+import Location from './location.js'
 
 export default class Event extends BaseModel {
   @column({ isPrimary: true })
@@ -32,6 +33,9 @@ export default class Event extends BaseModel {
   @column()
   declare eventTypeId: number
 
+  @column()
+  declare locationId: number | null
+
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
 
@@ -49,6 +53,9 @@ export default class Event extends BaseModel {
 
   @belongsTo(() => EventType)
   declare eventType: BelongsTo<typeof EventType>
+
+  @belongsTo(() => Location)
+  declare location: BelongsTo<typeof Location>
 
   @hasMany(() => EventVersion)
   declare eventVersions: HasMany<typeof EventVersion>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/axios';
 import { getVenues } from '../api/venues';
-import { Calendar, Clock, FileText, ArrowLeft, ArrowRight, Save, CheckCircle2, ChevronRight, Info, MapPin, Briefcase } from 'lucide-react';
+import { Calendar, Clock, FileText, ArrowLeft, ArrowRight, Save, CheckCircle2, ChevronRight, Info, MapPin, Briefcase, Plus, X } from 'lucide-react';
 
 const EventForm = () => {
     const { id } = useParams();
@@ -28,7 +28,15 @@ const EventForm = () => {
         programImpacted: '',
         guestSpecifications: '',
         presidiumDetail: '',
-        directorAction: ''
+        directorAction: '',
+        activities: []
+    });
+
+    const [currentActivity, setCurrentActivity] = useState({
+        name: '',
+        startsAt: '',
+        endsAt: '',
+        description: ''
     });
 
     useEffect(() => {
@@ -314,6 +322,93 @@ const EventForm = () => {
                                             onChange={handleChange}
                                         />
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* Agenda Section */}
+                            <div className="mt-12">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h3 className="text-xl font-display font-bold text-gray-900 flex items-center gap-2">
+                                        <Clock size={20} className="text-emerald-500" /> Agenda (Minuto a Minuto)
+                                    </h3>
+                                    <span className="bg-emerald-50 text-emerald-700 text-[10px] font-black px-3 py-1 rounded-full border border-emerald-100 uppercase">
+                                        {formData.activities.length} Actividades
+                                    </span>
+                                </div>
+
+                                <div className="bg-gray-50/50 p-6 rounded-3xl border border-gray-100 space-y-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="md:col-span-2">
+                                            <input
+                                                type="text"
+                                                placeholder="Nombre de la actividad (Ej: Bienvenida, Ponencia...)"
+                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-4 focus:ring-emerald-500/10 outline-none font-medium"
+                                                value={currentActivity.name}
+                                                onChange={(e) => setCurrentActivity({ ...currentActivity, name: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Inicio</label>
+                                            <input
+                                                type="time"
+                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-4 focus:ring-emerald-500/10 outline-none font-bold text-emerald-700"
+                                                value={currentActivity.startsAt}
+                                                onChange={(e) => setCurrentActivity({ ...currentActivity, startsAt: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Fin</label>
+                                            <input
+                                                type="time"
+                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-4 focus:ring-emerald-500/10 outline-none font-bold text-emerald-700"
+                                                value={currentActivity.endsAt}
+                                                onChange={(e) => setCurrentActivity({ ...currentActivity, endsAt: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (currentActivity.name && currentActivity.startsAt && currentActivity.endsAt) {
+                                                setFormData({
+                                                    ...formData,
+                                                    activities: [...formData.activities, currentActivity]
+                                                });
+                                                setCurrentActivity({ name: '', startsAt: '', endsAt: '', description: '' });
+                                            }
+                                        }}
+                                        className="w-full py-3 bg-white border border-emerald-200 text-emerald-600 rounded-xl font-bold text-sm hover:bg-emerald-50 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Plus size={18} /> Agregar Actividad a la Agenda
+                                    </button>
+                                </div>
+
+                                <div className="mt-6 space-y-3">
+                                    {formData.activities.map((act, index) => (
+                                        <div key={index} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100 shadow-sm animate-fade-in">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs">
+                                                    {index + 1}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-gray-900">{act.name}</p>
+                                                    <p className="text-xs text-gray-400 font-medium">{act.startsAt} - {act.endsAt}</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setFormData({
+                                                        ...formData,
+                                                        activities: formData.activities.filter((_, i) => i !== index)
+                                                    });
+                                                }}
+                                                className="p-2 text-gray-300 hover:text-red-500 transition-colors"
+                                            >
+                                                <X size={18} />
+                                            </button>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
 

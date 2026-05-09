@@ -1,7 +1,9 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import { DateTime } from 'luxon'
 import Event from '#models/event'
 import EventVersion from '#models/event_version'
 import VersionContent from '#models/version_content'
+import VersionActivity from '#models/version_activity'
 
 import { RagService } from '#services/rag_service'
 
@@ -32,7 +34,9 @@ export default class EventsController {
   async index({ response }: HttpContext) {
     const events = await Event.query()
       .preload('eventVersions', (query) => {
-        query.where('isCurrentVersion', true).preload('versionContent')
+        query.where('isCurrentVersion', true)
+          .preload('versionContent')
+          .preload('versionActivities')
       })
       .preload('organization')
       .preload('user')
@@ -64,7 +68,14 @@ export default class EventsController {
         guestSpecifications: content?.guestSpecifications,
         presidiumDetail: content?.presidiumDetail,
         directorAction: content?.directorAction,
-        currentState: e.currentState
+        currentState: e.currentState,
+        activities: currentVersion?.versionActivities.map(a => ({
+          id: a.id,
+          name: a.name,
+          startsAt: a.startsAt?.toFormat('HH:mm') || '',
+          endsAt: a.endsAt?.toFormat('HH:mm') || '',
+          description: a.description
+        })) || []
       }
     });
 
@@ -122,13 +133,30 @@ export default class EventsController {
     version.versionContentId = content.id
     await version.save()
 
-    // 4. Vectorizar para IA
+    // 4. Crear Actividades (Agenda)
+    if (data.activities && Array.isArray(data.activities)) {
+      for (const act of data.activities) {
+        const activity = await VersionActivity.create({
+          name: act.name,
+          description: act.description,
+          startsAt: DateTime.fromISO(act.startsAt),
+          endsAt: DateTime.fromISO(act.endsAt),
+          responsibleId: act.responsibleId || event.userId,
+          locationId: act.locationId || event.locationId
+        })
+        await version.related('versionActivities').attach([activity.id])
+      }
+    }
+
+    // 5. Vectorizar para IA
     try {
+      const activitiesText = data.activities?.map((a: any) => `- ${a.name}: ${a.startsAt}`).join('\n') || ''
       const fullContent = `
         Ficha Técnica: ${content.name}
         Objetivo: ${content.objective}
         Descripción: ${content.description}
         Dress Code: ${content.dressCode}
+        Agenda:\n${activitiesText}
         Programa: ${content.programImpacted}
         Invitados: ${content.guestSpecifications}
         Presidium: ${content.presidiumDetail}
@@ -193,19 +221,36 @@ export default class EventsController {
     version.versionContentId = content.id
     await version.save()
 
+    // 4. Crear Actividades (Agenda)
+    if (data.activities && Array.isArray(data.activities)) {
+      for (const act of data.activities) {
+        const activity = await VersionActivity.create({
+          name: act.name,
+          description: act.description,
+          startsAt: DateTime.fromISO(act.startsAt),
+          endsAt: DateTime.fromISO(act.endsAt),
+          responsibleId: act.responsibleId || event.userId,
+          locationId: act.locationId || event.locationId
+        })
+        await version.related('versionActivities').attach([activity.id])
+      }
+    }
+
     if (data.locationId) event.locationId = data.locationId
     if (data.organizationId) event.organizationId = data.organizationId
     if (data.eventTypeId) event.eventTypeId = data.eventTypeId
     event.currentState = 'in_review' 
     await event.save()
 
-    // 4. Vectorizar para IA
+    // 5. Vectorizar para IA
     try {
+      const activitiesText = data.activities?.map((a: any) => `- ${a.name}: ${a.startsAt}`).join('\n') || ''
       const fullContent = `
         Ficha Técnica: ${content.name}
         Objetivo: ${content.objective}
         Descripción: ${content.description}
         Dress Code: ${content.dressCode}
+        Agenda:\n${activitiesText}
         Programa: ${content.programImpacted}
         Invitados: ${content.guestSpecifications}
         Presidium: ${content.presidiumDetail}

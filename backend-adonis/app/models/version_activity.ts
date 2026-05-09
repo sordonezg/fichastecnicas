@@ -15,10 +15,10 @@ export default class VersionActivity extends BaseModel {
   @column()
   declare description: string | null
 
-  @column()
+  @column.dateTime()
   declare startsAt: DateTime
 
-  @column()
+  @column.dateTime()
   declare endsAt: DateTime
 
   @column()

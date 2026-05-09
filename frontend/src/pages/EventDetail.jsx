@@ -183,6 +183,38 @@ const EventDetail = () => {
                         </p>
                     </div>
 
+                    {/* Agenda / Minuto a Minuto */}
+                    {event.activities && event.activities.length > 0 && (
+                        <div className="bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm">
+                            <h2 className="text-lg font-display font-bold text-gray-900 mb-6 flex items-center gap-2">
+                                <Clock size={18} className="text-emerald-500" /> Agenda del Evento
+                            </h2>
+                            <div className="space-y-4">
+                                {event.activities.map((act, index) => (
+                                    <div key={index} className="flex gap-4 group">
+                                        <div className="flex flex-col items-center">
+                                            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs border border-emerald-100 group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                                                {index + 1}
+                                            </div>
+                                            {index < event.activities.length - 1 && (
+                                                <div className="w-0.5 h-full bg-gray-50 group-hover:bg-emerald-50 transition-colors my-1"></div>
+                                            )}
+                                        </div>
+                                        <div className="flex-1 pb-6">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <h4 className="font-bold text-gray-900">{act.name}</h4>
+                                                <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                                                    {act.startsAt} - {act.endsAt}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-gray-500">{act.description || 'Sin descripción adicional.'}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Technical Requirements / Detalles Específicos */}
                     <div className="bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm space-y-6">
                         <h2 className="text-lg font-display font-bold text-gray-900 mb-2 flex items-center gap-2 border-b border-gray-50 pb-4">

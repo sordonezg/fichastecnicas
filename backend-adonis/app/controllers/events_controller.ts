@@ -3,7 +3,10 @@ import Event from '#models/event'
 import EventVersion from '#models/event_version'
 import VersionContent from '#models/version_content'
 
+import { RagService } from '#services/rag_service'
+
 export default class EventsController {
+  private ragService = new RagService()
   private async checkOverlaps(startsAt: string, endsAt: string, locationId: number, currentEventId: number | null = null) {
     const allEvents = await Event.query()
       .where('locationId', locationId)
@@ -119,6 +122,23 @@ export default class EventsController {
     version.versionContentId = content.id
     await version.save()
 
+    // 4. Vectorizar para IA
+    try {
+      const fullContent = `
+        Ficha Técnica: ${content.name}
+        Objetivo: ${content.objective}
+        Descripción: ${content.description}
+        Dress Code: ${content.dressCode}
+        Programa: ${content.programImpacted}
+        Invitados: ${content.guestSpecifications}
+        Presidium: ${content.presidiumDetail}
+        Director: ${content.directorAction}
+      `.trim()
+      await this.ragService.vectorizeFichaTecnica(event.id, content.id, fullContent)
+    } catch (e) {
+      console.error('Error vectorizando ficha:', e)
+    }
+
     return response.created({ message: 'Ficha técnica creada', event })
   }
 
@@ -178,6 +198,23 @@ export default class EventsController {
     if (data.eventTypeId) event.eventTypeId = data.eventTypeId
     event.currentState = 'in_review' 
     await event.save()
+
+    // 4. Vectorizar para IA
+    try {
+      const fullContent = `
+        Ficha Técnica: ${content.name}
+        Objetivo: ${content.objective}
+        Descripción: ${content.description}
+        Dress Code: ${content.dressCode}
+        Programa: ${content.programImpacted}
+        Invitados: ${content.guestSpecifications}
+        Presidium: ${content.presidiumDetail}
+        Director: ${content.directorAction}
+      `.trim()
+      await this.ragService.vectorizeFichaTecnica(event.id, content.id, fullContent)
+    } catch (e) {
+      console.error('Error vectorizando ficha:', e)
+    }
 
     return response.ok({ message: 'Ficha técnica actualizada', event })
   }

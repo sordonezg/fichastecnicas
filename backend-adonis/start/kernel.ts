@@ -45,5 +45,6 @@ router.use([
 export const middleware = router.named({
   role: () => import('#middleware/role_middleware'),
   silentAuth: () => import('#middleware/silent_auth_middleware'),
-  auth: () => import('#middleware/auth_middleware')
+  auth: () => import('#middleware/auth_middleware'),
+  jwtAuth: () => import('#middleware/jwt_auth_middleware')
 })

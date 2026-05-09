@@ -34,7 +34,7 @@ router.group(() => {
 })
 .prefix('/admin')
 .as('admin')
-.use([middleware.auth(), middleware.role(['admin'])])
+.use([middleware.jwtAuth(), middleware.role(['admin'])])
 
 // 2. Auxiliar
 router.group(() => {
@@ -43,7 +43,7 @@ router.group(() => {
 })
 .prefix('/auxiliar')
 .as('auxiliar')
-.use([middleware.auth(), middleware.role(['auxiliar'])])
+.use([middleware.jwtAuth(), middleware.role(['auxiliar'])])
 
 // 3. Staff Interno
 router.group(() => {
@@ -52,7 +52,7 @@ router.group(() => {
 })
 .prefix('/staff-internal')
 .as('staff_interno')
-.use([middleware.auth(), middleware.role(['staff_interno'])])
+.use([middleware.jwtAuth(), middleware.role(['staff_interno'])])
 
 // --- Rutas de IA y Chatbot (Protegidas) ---
 const RagController = () => import('#controllers/rag_controller')
@@ -66,7 +66,7 @@ router.group(() => {
     router.post('/vectorize', [RagController, 'vectorizeVersion']).as('rag.vectorize')
 })
 .prefix('/api/ai')
-.use([middleware.auth()]) // Todos los roles autenticados pueden usar el chatbot
+.use([middleware.jwtAuth()]) // Todos los roles autenticados pueden usar el chatbot
 
 // --- API Integrada con Frontend (Fichas Técnicas) ---
 router.group(() => {
@@ -76,32 +76,35 @@ router.group(() => {
     // UsersController store handles registration for legacy auth
     router.post('/auth/register', [UsersController, 'store'])
 
-    // Events / Fichas Técnicas
-    router.get('/events', [EventsController, 'index'])
-    router.post('/events', [EventsController, 'store'])
-    router.put('/events/:id', [EventsController, 'update'])
-    router.patch('/events/:id/status', [EventsController, 'updateStatus'])
-    router.delete('/events/:id', [EventsController, 'destroy'])
+    // Rutas protegidas de la API
+    router.group(() => {
+        // Events / Fichas Técnicas
+        router.get('/events', [EventsController, 'index'])
+        router.post('/events', [EventsController, 'store'])
+        router.put('/events/:id', [EventsController, 'update'])
+        router.patch('/events/:id/status', [EventsController, 'updateStatus'])
+        router.delete('/events/:id', [EventsController, 'destroy'])
 
-    // Venues / Locations
-    router.get('/venues', [VenuesController, 'index'])
-    router.post('/venues', [VenuesController, 'store'])
-    router.put('/venues/:id', [VenuesController, 'update'])
-    router.delete('/venues/:id', [VenuesController, 'destroy'])
+        // Venues / Locations
+        router.get('/venues', [VenuesController, 'index'])
+        router.post('/venues', [VenuesController, 'store'])
+        router.put('/venues/:id', [VenuesController, 'update'])
+        router.delete('/venues/:id', [VenuesController, 'destroy'])
 
-    // Users
-    router.get('/users', [UsersController, 'index'])
-    router.post('/users', [UsersController, 'store'])
-    router.put('/users/:id', [UsersController, 'update'])
-    router.delete('/users/:id', [UsersController, 'destroy'])
+        // Users
+        router.get('/users', [UsersController, 'index'])
+        router.post('/users', [UsersController, 'store'])
+        router.put('/users/:id', [UsersController, 'update'])
+        router.delete('/users/:id', [UsersController, 'destroy'])
 
-    // Catalog
-    const CatalogsController = () => import('#controllers/catalogs_controller')
-    router.get('/organizations', [CatalogsController, 'getOrganizations'])
-    router.get('/event-types', [CatalogsController, 'getEventTypes'])
-    router.get('/catalog', [CatalogsController, 'index'])
-    
-    router.post('/catalog', [CatalogsController, 'store'])
-    router.delete('/catalog/:id', [CatalogsController, 'destroy'])
-    
+        // Catalog
+        const CatalogsController = () => import('#controllers/catalogs_controller')
+        router.get('/organizations', [CatalogsController, 'getOrganizations'])
+        router.get('/event-types', [CatalogsController, 'getEventTypes'])
+        router.get('/catalog', [CatalogsController, 'index'])
+        
+        router.post('/catalog', [CatalogsController, 'store'])
+        router.delete('/catalog/:id', [CatalogsController, 'destroy'])
+    }).use([middleware.jwtAuth()])
+
 }).prefix('/api') // Frontend points to /api

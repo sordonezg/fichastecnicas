@@ -1,6 +1,7 @@
 import { useAuth } from '../context/AuthContext';
 import { LogOut, Calendar, PlusCircle, User as UserIcon, Bell, Search, LayoutDashboard, Tag, MapPin } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import ChatBot from './ChatBot';
 
 const Layout = ({ children }) => {
     const { user, logout } = useAuth();
@@ -130,6 +131,7 @@ const Layout = ({ children }) => {
                     <p>© 2026 Plataforma de Fichas Técnicas • Todos los derechos reservados.</p>
                 </footer>
             </div>
+            <ChatBot />
         </div>
     );
 };

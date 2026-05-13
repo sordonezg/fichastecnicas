@@ -55,8 +55,8 @@ const EventForm = () => {
                 setEventTypes(typesRes.data || []);
 
                 if (isEditMode) {
-                    const { data: events } = await api.get('/events');
-                    const currentEvent = events.find(e => String(e.id) === String(id));
+                    const eventsRes = await api.get('/events');
+                    const currentEvent = eventsRes.data.data.find(e => String(e.id) === String(id));
                     if (currentEvent) {
                         setFormData({
                             name: currentEvent.name || currentEvent.titulo || '',
@@ -370,6 +370,10 @@ const EventForm = () => {
                                         type="button"
                                         onClick={() => {
                                             if (currentActivity.name && currentActivity.startsAt && currentActivity.endsAt) {
+                                                if (currentActivity.startsAt >= currentActivity.endsAt) {
+                                                    alert("La hora de fin debe ser posterior a la de inicio");
+                                                    return;
+                                                }
                                                 setFormData({
                                                     ...formData,
                                                     activities: [...formData.activities, currentActivity]

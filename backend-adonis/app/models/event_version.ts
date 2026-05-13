@@ -31,7 +31,9 @@ export default class EventVersion extends BaseModel {
   @belongsTo(() => VersionContent)
   declare versionContent: BelongsTo<typeof VersionContent>
 
-  @manyToMany(() => VersionActivity)
+  @manyToMany(() => VersionActivity, {
+    pivotTable: 'event_versions_to_version_activities',
+  })
   declare versionActivities: ManyToMany<typeof VersionActivity>
 
   @hasMany(() => VersionStaffing)

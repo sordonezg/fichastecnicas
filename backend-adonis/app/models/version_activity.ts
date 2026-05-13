@@ -39,6 +39,8 @@ export default class VersionActivity extends BaseModel {
   @belongsTo(() => Location)
   declare location: BelongsTo<typeof Location>
 
-  @manyToMany(() => EventVersion)
+  @manyToMany(() => EventVersion, {
+    pivotTable: 'event_versions_to_version_activities',
+  })
   declare eventVersions: ManyToMany<typeof EventVersion>
 }

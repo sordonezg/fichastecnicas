@@ -27,7 +27,7 @@ const Dashboard = () => {
                 api.get('/events'),
                 getVenues()
             ]);
-            setEvents(eventsRes.data);
+            setEvents(eventsRes.data.data);
             setVenues(venuesRes);
         } catch (error) {
             console.error('Error fetching events:', error);
